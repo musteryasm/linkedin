@@ -1,0 +1,37 @@
+name: LinkedIn Automation
+
+on:
+  schedule:
+    - cron: '30 11 * * *'  # This is 5 PM IST (UTC+5:30), running at 11:30 AM UTC.
+  workflow_dispatch:  # Allows manual triggering of the workflow if needed.
+
+jobs:
+  linkedin-job:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'  # Use the required Python version
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run LinkedIn Automation Script
+        env:
+          LINKEDIN_USERNAME: ${{ secrets.LINKEDIN_USERNAME }}
+          LINKEDIN_PASSWORD: ${{ secrets.LINKEDIN_PASSWORD }}
+        run: |
+          python main.py
+          
+      - name: Error Logging (Optional)
+        if: failure()
+        run: |
+          echo "An error occurred while running the script!" >> error_log.txt
+          cat error_log.txt
