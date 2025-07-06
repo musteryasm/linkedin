@@ -112,13 +112,20 @@ companies = [
 def connect_people(company_name):
     global driver
     print(f"\n🔍 Searching and connecting for: {company_name}")
+    # Step 1: Search for the company
     try:
-        # Step 1: Search
-        search_box = driver.find_element(By.XPATH, "//input[contains(@placeholder, 'Search')]")
-        search_box.clear()
-        search_box.send_keys(company_name)
-        search_box.send_keys(Keys.RETURN)
-        time.sleep(5)
+        search_box = driver.find_element(By.XPATH, "//input[@aria-label='Search']")
+    except:
+        try:
+            search_box = driver.find_element(By.CSS_SELECTOR, "input.search-global-typeahead__input")
+        except:
+            print("❌ Search bar not found. LinkedIn may have updated its UI.")
+            return
+    
+    search_box.clear()
+    search_box.send_keys(company_name)
+    search_box.send_keys(Keys.RETURN)
+    time.sleep(5)
 
         # Step 2: See all people
         try:
