@@ -108,26 +108,27 @@ companies = [
     "BlackRock", "BCG", "Bain & Company", "McKinsey & Company", "Boston Consulting Group", "Oliver Wyman",
     "Roland Berger", "A.T. Kearney", "Accenture", "Deloitte", "PwC", "EY", "KPMG"
 ]
-
 def connect_people(company_name):
     global driver
     print(f"\n🔍 Searching and connecting for: {company_name}")
-    # Step 1: Search for the company
-    try:
-        search_box = driver.find_element(By.XPATH, "//input[@aria-label='Search']")
-    except:
-        try:
-            search_box = driver.find_element(By.CSS_SELECTOR, "input.search-global-typeahead__input")
-        except:
-            print("❌ Search bar not found. LinkedIn may have updated its UI.")
-            return
-    
-    search_box.clear()
-    search_box.send_keys(company_name)
-    search_box.send_keys(Keys.RETURN)
-    time.sleep(5)
 
-        # Step 2: See all people
+    try:
+        # Step 1: Search for the company
+        try:
+            search_box = driver.find_element(By.XPATH, "//input[@aria-label='Search']")
+        except:
+            try:
+                search_box = driver.find_element(By.CSS_SELECTOR, "input.search-global-typeahead__input")
+            except:
+                print("❌ Search bar not found. LinkedIn may have updated its UI.")
+                return
+
+        search_box.clear()
+        search_box.send_keys(company_name)
+        search_box.send_keys(Keys.RETURN)
+        time.sleep(5)
+
+        # Step 2: Click "See all people results"
         try:
             see_all_people = driver.find_element(By.XPATH, "//a[contains(text(), 'See all people results')]")
             driver.execute_script("arguments[0].click();", see_all_people)
@@ -136,7 +137,7 @@ def connect_people(company_name):
             print("⚠️ Could not find 'See all people results'. Skipping company.")
             return
 
-        # Step 3: Connect loop
+        # Step 3: Connect to people
         connections_sent = 0
         target_connections = 1
 
@@ -162,7 +163,7 @@ def connect_people(company_name):
                     print(f"⚠️ Error sending connect: {e}")
                     time.sleep(2)
 
-            # Go to next page if needed
+            # Try going to next page if more connections are needed
             if connections_sent < target_connections:
                 try:
                     next_button = driver.find_element(By.XPATH, "//button[span[text()='Next']]")
@@ -177,6 +178,9 @@ def connect_people(company_name):
     except Exception as e:
         print(f"❌ Error during company '{company_name}': {e}")
 
+
+# -------------------- MAIN EXECUTION --------------------
+
 try:
     # Step 0: LinkedIn login
     driver.get("https://www.linkedin.com/login")
@@ -187,7 +191,7 @@ try:
     driver.find_element(By.XPATH, "//button[@type='submit']").click()
     time.sleep(5)
 
-    # Randomly select a company
+    # Pick one random company
     random_company = random.choice(companies)
     connect_people(random_company)
 
