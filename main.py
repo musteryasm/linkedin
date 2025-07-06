@@ -2,17 +2,32 @@ import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 from dotenv import load_dotenv
+import tempfile
 import time
 import os
 
 # Load environment variables
 load_dotenv()
-
 USERNAME = os.getenv("LINKEDIN_USERNAME")
 PASSWORD = os.getenv("LINKEDIN_PASSWORD")
 
-# Define the list of companies
+# Setup headless Chrome with safe options
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+chrome_options.add_experimental_option('useAutomationExtension', False)
+
+# Use a unique temporary user-data-dir to avoid SessionNotCreatedException
+user_data_dir = tempfile.mkdtemp()
+chrome_options.add_argument(f"--user-data-dir={user_data_dir}")
+
+# Initialize WebDriver
+driver = webdriver.Chrome(options=chrome_options)
 
 # List of companies
 companies = [
@@ -94,31 +109,27 @@ companies = [
     "Roland Berger", "A.T. Kearney", "Accenture", "Deloitte", "PwC", "EY", "KPMG"
 ]
 
-
-# Initialize WebDriver
-driver = webdriver.Chrome()
-
 def connect_people(company_name):
     global driver
-    print(f"\n🔍 Searching and connecting for random company: {company_name}")
+    print(f"\n🔍 Searching and connecting for: {company_name}")
     try:
-        # Step 1: Search for the company
+        # Step 1: Search
         search_box = driver.find_element(By.XPATH, "//input[contains(@placeholder, 'Search')]")
         search_box.clear()
         search_box.send_keys(company_name)
         search_box.send_keys(Keys.RETURN)
         time.sleep(5)
 
-        # Step 2: Click "See all people results"
+        # Step 2: See all people
         try:
-            see_all_people = driver.find_element(By.XPATH, "//div[contains(@class, 'search-results__cluster-bottom-banner')]//a[contains(text(), 'See all people results')]")
+            see_all_people = driver.find_element(By.XPATH, "//a[contains(text(), 'See all people results')]")
             driver.execute_script("arguments[0].click();", see_all_people)
             time.sleep(5)
-        except Exception as e:
+        except Exception:
             print("⚠️ Could not find 'See all people results'. Skipping company.")
             return
 
-        # Step 3: Connect to people
+        # Step 3: Connect loop
         connections_sent = 0
         target_connections = 1
 
@@ -138,28 +149,29 @@ def connect_people(company_name):
                     time.sleep(2)
 
                     connections_sent += 1
-                    print(f"✅ Sent connection request: {connections_sent}")
+                    print(f"✅ Sent connection request #{connections_sent}")
 
                 except Exception as e:
                     print(f"⚠️ Error sending connect: {e}")
                     time.sleep(2)
 
+            # Go to next page if needed
             if connections_sent < target_connections:
                 try:
                     next_button = driver.find_element(By.XPATH, "//button[span[text()='Next']]")
                     driver.execute_script("arguments[0].click();", next_button)
                     time.sleep(5)
-                except Exception as e:
-                    print("⚠️ No next button found, cannot move further.")
+                except Exception:
+                    print("⚠️ No next button found. Ending.")
                     break
 
-        print(f"✅ Completed connecting to {connections_sent} people for {company_name}!")
+        print(f"✅ Finished connecting to {connections_sent} people for {company_name}.")
 
     except Exception as e:
-        print(f"❌ Error with company {company_name}: {e}")
+        print(f"❌ Error during company '{company_name}': {e}")
 
 try:
-    # Step 0: Login first
+    # Step 0: LinkedIn login
     driver.get("https://www.linkedin.com/login")
     time.sleep(2)
 
@@ -168,10 +180,10 @@ try:
     driver.find_element(By.XPATH, "//button[@type='submit']").click()
     time.sleep(5)
 
-    # Pick one random company
+    # Randomly select a company
     random_company = random.choice(companies)
     connect_people(random_company)
 
 finally:
-    print("\n🚀 Done! Closing the browser.")
+    print("\n🚀 Done. Closing browser.")
     driver.quit()
